@@ -9,13 +9,13 @@
 #include "complex.h"
 #define width 100//aka. real axis, x
 #define height 60//aka imaginary axis, y 
-#define thickness 80//must be at least 2, z the axis where c in //f()=z^2+c comes from
+#define thickness 60//must be at least 2, z the axis where c in //f()=z^2+c comes from
 //#define theforth 100
 
 //#include "mathPrinter.h"
-#define highTHRESHOLD 100 //how outwards can a pixel can go without being out of bounds
+#define highTHRESHOLD 100//how outwards can a pixel can go without being out of bounds
 //#define lowTHRESHOLD -100
-#define PIXEL_WEIGHT 20 //how long a pixel has to be tested to concur it stays in bounds //also number of shades of color
+#define PIXEL_WEIGHT 10 //how long a pixel has to be tested to concur it stays in bounds //also number of shades of color
 
 using namespace std;
 mutex coutMutex;
@@ -26,8 +26,34 @@ int mandel(complex number, complex z)//f()=z^2+c
 	//while(((z.geti()+z.getr())/2)>highTHRESHOLD||(z.geti()+z.getr())<lowTHRESHOLD)
 	for (int i = 0; i < PIXEL_WEIGHT && !(((abs(z.geti())+abs(z.getr()))/2)>highTHRESHOLD) ; i++)
 	{
+		//number.seti(number.getr());//erase this later, this is me trying to get the julia set, Its fucks up spectacularly
 		z=z*z+number;
-		number=z;//this should not be here for the standard but it was interesting
+		//number=z;//this should not be here for the standard but it was interesting
+		counter--;
+		//cout << z.getr() << " + " <<z.geti() <<endl; //for debugging calculation
+	}
+	//if(((abs(z.geti())+abs(z.getr()))/2)>highTHRESHOLD)
+	//	return false;//it got out of bounds
+	//return true;//it was in bounds
+	if(counter==0)//
+		return true;//
+	else//
+		return false;// this is when you want monochrome pictures
+	//return counter;//this is when you want grayscale pictures
+}
+
+int burning(complex number, complex z)//f()=|z|^2+c
+{
+	
+	int counter=PIXEL_WEIGHT;
+	//while(((z.geti()+z.getr())/2)>highTHRESHOLD||(z.geti()+z.getr())<lowTHRESHOLD)
+	for (int i = 0; i < PIXEL_WEIGHT && !(((abs(z.geti())+abs(z.getr()))/2)>highTHRESHOLD) ; i++)
+	{
+		//number.seti(number.getr());//erase this later, this is me trying to get the julia set, Its fucks up spectacularly
+		z.seti(abs(z.geti()));
+		z.setr(abs(z.getr()));
+		z=z*z+number;
+		//number=z;//this should not be here for the standard but it was interesting
 		counter--;
 		//cout << z.getr() << " + " <<z.geti() <<endl; //for debugging calculation
 	}
@@ -84,20 +110,23 @@ void BetterPicCreate(double z)
 		//use the next line and delete the one after if you want to make grayscale images
 		//pic << "P2" << endl << height << " " << width << endl << PIXEL_WEIGHT << endl;//first you have enter the color mode width height and number of colors that will be used on that color mode to make the file
 		pic << "P1" << endl << height << " " << width << endl << endl;
-		compz.seti(z/(thickness/4.0));
+		compz.seti(z/(thickness/2.0));//changed the the divider to 2.o because it was compressing the z too much
+		//compz.setr(z/(thickness/4.0));//delete later!!!!!!!
 		coutMutex.lock();
 		cout <<"layer "<< z << " has been initiated" << endl;
 		coutMutex.unlock();
 	
-		for(int x = -(width*0.55); x< (width*0.45);x++)
+		for(int x = -(width*0.55); x< (width*0.45);x++)//o.55 and o.45 is for pushing the view a bit downwards
 		{
-			for(int y = -height/2; y<(height/2); y++)
+			for(int y = -height/2; y<(height/2); y++)//same as x just pushing the view down
 			{
 				complex n;
 				n.seti(y/(height/4.0));
 				n.setr(x/(width/4.0));
 				//table.input(x,y,mandel(n));
-				pic << mandel(n,compz) << " ";
+				
+				//pic << mandel(n,compz) << " ";//reintroduce this
+				pic << burning(n,compz) << " ";//erase this later
 			}
 			pic << endl;
 		}
@@ -132,7 +161,7 @@ int main()
 	int num_of_threads=2;//thickness is the outer dimension that I use for creating the layers, hence there is a ppm file for each layer
 	thread * threads = new thread [num_of_threads];//creates a thread for each file
 	
-	for(int i=0; i<thickness/num_of_threads;i++)
+	for(int i=-thickness/2; i<(thickness/2)/num_of_threads;i++)
 	{
 		for(int a=0; a<num_of_threads;a++)
 			threads[a]=thread(BetterPicCreate,i*num_of_threads+a);//each thread also need to know which layer they are and this is why picCreate function has a double z input
@@ -148,10 +177,12 @@ int main()
 
 	ofstream stl;
 	stl.open("file.stl");
-	stl << "solid" << endl; 
+	stl << "solid" << endl;
 
-	//for(int z=-thickness/2;z<thickness/2;z++)
-	for(int z= 0 ; z<thickness ; z++)
+	 
+
+	//for(int z= 0 ; z<thickness ; z++)//only positive values
+	for(int z=-thickness/2;z<thickness/2;z++)//both negative and positive values (make sure you gave enough "thickness" leeway
 	{
 		if(z==0)//if(z==-thickness/2)
 		{
